@@ -1,4 +1,4 @@
-# is-archived-repo
+# f-droid-unarchived-app-got-archived-repo-checker
 
 ## Usage
 
