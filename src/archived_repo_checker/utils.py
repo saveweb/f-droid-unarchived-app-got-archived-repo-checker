@@ -9,7 +9,7 @@ class Result:
     """ is the result reliable """
     repo_deleted: bool
     repo_archived: bool
-    src_real: str
+    repo_real: str
     """ the real URL after redirects """
     error: Optional[Exception]
     def __init__(
@@ -24,7 +24,7 @@ class Result:
         self.comfirmed = comfirmed
         self.repo_deleted = repo_deleted
         self.repo_archived = repo_archived
-        self.src_real = real_src
+        self.repo_real = real_src
         self.error = error
 
 

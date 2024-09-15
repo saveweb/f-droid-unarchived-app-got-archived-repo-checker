@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+import yaml
 import threading
 from queue import Queue
 
@@ -8,21 +10,24 @@ import httpx
 from archived_repo_checker import is_archived_repo
 
 
-def get_src_ok_pkgs() -> dict[str, dict]:
+def get_repo_ok_pkgs() -> dict[str, dict]:
     assert os.path.exists("index-v2.json"), "index-v2.json not found"
     with open("index-v2.json", "r") as f:
         pkgs = json.load(f)["packages"]
 
-    src_ok_pkgs = {}
+    repo_ok_pkgs = {}
 
-    for pkg_name in pkgs:
+    print("Checking packages...")
+    for idx, pkg_name in enumerate(pkgs):
+        print(f'{idx}/{len(pkgs)}', pkg_name, end="\r")
         pkg = pkgs[pkg_name]
         metadata: dict = pkg["metadata"]
         versions = pkg["versions"]
-        if get_sourceCode(metadata) and not is_NoSourceSince(versions):
-            src_ok_pkgs[pkg_name] = metadata
+        if get_fdroid_data_defined_repo(pkg_name) and not is_NoSourceSince(versions):
+            repo_ok_pkgs[pkg_name] = metadata
+    print(" " * 40, end="\r")
 
-    return src_ok_pkgs
+    return repo_ok_pkgs
 
 
 def is_NoSourceSince(versions: dict) -> bool:
@@ -36,15 +41,44 @@ def is_NoSourceSince(versions: dict) -> bool:
     return False
 
 
-def get_sourceCode(metadata: dict) -> str:
-    sourceCode = metadata.get("sourceCode", "")
-    if not sourceCode:
-        return ""
+# def get_sourceCode(metadata: dict) -> str:
+#     sourceCode = metadata.get("sourceCode", "")
+#     if not sourceCode:
+#         return ""
 
-    assert (
-        "http://" in sourceCode or "https://" in sourceCode
-    ), f"Invalid URL: {sourceCode}"
-    return sourceCode
+#     assert (
+#         "http://" in sourceCode or "https://" in sourceCode
+#     ), f"Invalid URL: {sourceCode}"
+#     return sourceCode
+
+
+global_client = httpx.Client(
+    http2=True,
+    headers={
+        "User-Agent": "archived_repo_checker/0.1.0 (archived_repo_checker checker)",
+        "language": "en-US,en;q=0.5",
+    },
+    timeout=10,
+)
+def get_fdroid_data_defined_repo(pkg_name: str) -> str|None:
+    # https://gitlab.com/fdroid/fdroiddata/-/raw/master/metadata/{pkg_name}.yml
+    if os.path.exists(f"/tmp/fdroiddata/metadata/{pkg_name}.yml"):
+        with open(f"/tmp/fdroiddata/metadata/{pkg_name}.yml", "r") as f:
+            yml = yaml.safe_load(f)
+            Repo = yml.get("Repo", None)
+            return Repo
+
+    url = f"https://gitlab.com/fdroid/fdroiddata/-/raw/master/metadata/{pkg_name}.yml"
+    try:
+        r = global_client.get(url)
+        if r.status_code != 200:
+            return None
+        yml = yaml.safe_load(r.text)
+        Repo = yml.get("Repo", None)
+        return Repo
+    except Exception as e:
+        print("ERR:", e, file=sys.stderr)
+        return None
 
 
 def main():
@@ -54,10 +88,10 @@ def main():
         with open("checked.result.json", "r") as f:
             checked = json.load(f)
 
-    src_ok_pkgs = get_src_ok_pkgs()
+    repo_ok_pkgs = get_repo_ok_pkgs()
 
     item_queue = Queue()
-    for idx, item in enumerate(src_ok_pkgs.items()):
+    for idx, item in enumerate(repo_ok_pkgs.items()):
         item_queue.put((idx, item))
 
     lock = threading.Lock()
@@ -76,8 +110,9 @@ def main():
         while not item_queue.empty() and not stop:
             idx, item = item_queue.get()
             pkg, metadata = item
-            src = get_sourceCode(metadata)
-            print(f"{idx}/{len(src_ok_pkgs)}", pkg, src, end="          \r")
+            repo = get_fdroid_data_defined_repo(pkg_name=pkg)
+            assert repo, f"Repo not found: {pkg}"
+            print(f"{idx}/{len(repo_ok_pkgs)}", pkg, repo, end="          \r")
             lock.acquire()
             if pkg in checked and checked[pkg]["comfirmed"]:
                 lock.release()
@@ -85,19 +120,19 @@ def main():
                 continue
             lock.release()
             try:
-                res = is_archived_repo(src, client=client)
+                res = is_archived_repo(repo, client=client)
                 lock.acquire()
                 checked[pkg] = {
                     "comfirmed": res.comfirmed,
-                    "src": src, # f-droid metadata::sourceCode
-                    "src_real": res.src_real,
+                    "repo": repo,
+                    "repo_real": res.repo_real,
                     "repo_deleted": res.repo_deleted,
                     "repo_archived": res.repo_archived,
                     "error": str(res.error) if res.error else None,
                 }
                 lock.release()
                 if not res.comfirmed:
-                    print(f"not comfirmed: https://f-droid.org/packages/{pkg} | {src} <-> {res.error} |")
+                    print(f"not comfirmed: https://f-droid.org/packages/{pkg} | {repo} <-> {res.error} |")
             finally:
                 item_queue.task_done()
 
