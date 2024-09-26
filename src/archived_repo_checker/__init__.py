@@ -44,7 +44,7 @@ def is_archived_repo(url: str, *, client: Optional[httpx.Client] = None) -> Resu
         response = client.get(url, follow_redirects=True)
         if _is_cloudflare_captcha(response):
             return Result(
-                comfirmed=False,
+                confirmed=False,
                 error=WAFDetected("Cloudflare WAF detected"),
                 real_src=str(response.url),
             )
@@ -54,14 +54,14 @@ def is_archived_repo(url: str, *, client: Optional[httpx.Client] = None) -> Resu
 
         if response.status_code != 200:
             return Result(
-                comfirmed=False,
+                confirmed=False,
                 error=Exception(f"HTTP status code: {response.status_code}"),
                 real_src=str(response.url),
             )
 
         _result = check_all(response)
         return Result(
-            comfirmed=_result[0],
+            confirmed=_result[0],
             repo_archived=_result[1],
             real_src=str(response.url),
             error=Exception(
@@ -71,7 +71,7 @@ def is_archived_repo(url: str, *, client: Optional[httpx.Client] = None) -> Resu
             else None,
         )
     except Exception as e:
-        return Result(comfirmed=False, error=e)
+        return Result(confirmed=False, error=e)
 
 
 def argparser():

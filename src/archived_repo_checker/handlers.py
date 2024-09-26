@@ -14,5 +14,5 @@ not_found_is_deleted_hosts = [
 def not_found_handler(r: httpx.Response) -> Result:
     for host in not_found_is_deleted_hosts:
         if host in r.url.host:
-            return Result(comfirmed=True, repo_deleted=True, real_src=str(r.url), error=Exception(f"HTTP status code: {r.status_code}"))
-    return Result(comfirmed=False, repo_deleted=False, real_src=str(r.url), error=Exception(f"HTTP status code: {r.status_code}"))
+            return Result(confirmed=True, repo_deleted=True, real_src=str(r.url), error=Exception(f"HTTP status code: {r.status_code}"))
+    return Result(confirmed=False, repo_deleted=False, real_src=str(r.url), error=Exception(f"HTTP status code: {r.status_code}"))

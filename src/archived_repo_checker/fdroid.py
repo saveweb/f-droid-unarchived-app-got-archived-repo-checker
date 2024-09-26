@@ -77,7 +77,7 @@ def main():
             repo = metadata.get('Repo', None)
             print(f"\33[2K{idx+1}/{len(repo_ok_pkgs)}", os.path.basename(pkg), repo, end="\r")
             lock.acquire()
-            if pkg in checked and checked[pkg]["comfirmed"]:
+            if pkg in checked and checked[pkg]["confirmed"]:
                 lock.release()
                 item_queue.task_done()
                 continue
@@ -86,7 +86,7 @@ def main():
                 res = is_archived_repo(repo, client=client)
                 lock.acquire()
                 checked[pkg] = {
-                    "comfirmed": res.comfirmed,
+                    "confirmed": res.confirmed,
                     "repo": repo,
                     "repo_real": res.repo_real,
                     "repo_deleted": res.repo_deleted,
@@ -94,8 +94,8 @@ def main():
                     "error": str(res.error) if res.error else None,
                 }
                 lock.release()
-                if not res.comfirmed:
-                    print(f"not comfirmed: {os.path.basename(pkg)} | {repo} <-> {res.error} |")
+                if not res.confirmed:
+                    print(f"not confirmed: {os.path.basename(pkg)} | {repo} <-> {res.error} |")
             finally:
                 item_queue.task_done()
 

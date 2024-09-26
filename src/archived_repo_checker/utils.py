@@ -5,7 +5,7 @@ import httpx
 
 @dataclass
 class Result:
-    comfirmed: bool
+    confirmed: bool
     """ is the result reliable """
     repo_deleted: bool
     repo_archived: bool
@@ -15,13 +15,13 @@ class Result:
     def __init__(
         self,
         *,
-        comfirmed: bool = False,
+        confirmed: bool = False,
         repo_deleted: bool = False,
         repo_archived: bool = False,
         real_src: str = "",
         error: Optional[Exception] = None,
     ):
-        self.comfirmed = comfirmed
+        self.confirmed = confirmed
         self.repo_deleted = repo_deleted
         self.repo_archived = repo_archived
         self.repo_real = real_src
