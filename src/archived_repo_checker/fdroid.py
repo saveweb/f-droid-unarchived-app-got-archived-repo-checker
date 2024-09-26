@@ -2,7 +2,7 @@ import argparse
 import glob
 import json
 import os
-import sys
+from typing import Optional
 import yaml
 import threading
 from queue import Queue
@@ -74,7 +74,11 @@ def main():
         while not item_queue.empty() and not stop:
             idx, item = item_queue.get()
             pkg, metadata = item
-            repo = metadata.get('Repo', None)
+            repo: Optional[str] = metadata.get('Repo', None)
+            if repo is None or not repo.startswith("http"):
+                # Fallback to SourceCode
+                repo = metadata.get("SourceCode", None)
+
             print(f"\33[2K{idx+1}/{len(repo_ok_pkgs)}", os.path.basename(pkg), repo, end="\r")
             lock.acquire()
             if pkg in checked and checked[pkg]["confirmed"]:
