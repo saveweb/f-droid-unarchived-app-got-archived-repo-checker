@@ -21,23 +21,24 @@ def check_all(client: httpx.Client, response: httpx.Response, sample_commit_hash
         methods.gitlab_check,
         methods.gitea_check,
         methods.gitee_check,
+        methods.google_code_check,
     ]
     moved_checks = [
         methods.moved_to_github_check,
         methods.moved_to_gitlab_check,
     ]
     res = Result()
-    url = str(response.url)
+    resp_url = str(response.url)
     for func in funcs:
         logger.debug(f"exec {func.__name__}")
-        res = func(url, response)
+        res = func(resp_url, response)
         if res.confirmed:
             logger.debug(f"exec {func.__name__} returned {res.repo_archived}")
             break
 
     if res.repo_archived and sample_commit_hash:
         for func in moved_checks:
-            func(client, url, response, sample_commit_hash, res)
+            func(client, resp_url, response, sample_commit_hash, res)
 
     return res
 
@@ -46,12 +47,12 @@ class WAFDetected(Exception):
     pass
 
 
-def is_archived_repo(url: str, sample_commit_hash: Optional[str] = None, *, client: Optional[httpx.Client] = None) -> Result:
+def is_archived_repo(repo_url: str, sample_commit_hash: Optional[str] = None, *, client: Optional[httpx.Client] = None) -> Result:
     if client is None:
         client = global_client
 
     try:
-        response = client.get(url, follow_redirects=True)
+        response = client.get(repo_url, follow_redirects=True)
         if _is_cloudflare_captcha(response):
             return Result(
                 error=WAFDetected("Cloudflare WAF detected"),

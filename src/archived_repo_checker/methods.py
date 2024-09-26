@@ -94,3 +94,10 @@ def gitee_check(url: str, response: httpx.Response) -> Result:
         return Result(repo_archived=True)
 
     return Result(repo_archived=False)
+
+def google_code_check(url: str, _: httpx.Response) -> Result:
+    """ Google Code is archived """
+    if "code.google.com/" not in url:
+        return Result()
+
+    return Result(repo_archived=True)

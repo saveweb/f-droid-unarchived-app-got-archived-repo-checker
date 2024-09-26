@@ -75,7 +75,9 @@ def main():
             idx, item = item_queue.get()
             pkg, metadata = item
             repo: Optional[str] = metadata.get('Repo', None)
-            if repo is None or not repo.startswith("http"):
+            if repo is None\
+                or not repo.startswith("http") \
+                or "git.code.sf.net/p/" in repo:
                 # Fallback to SourceCode
                 repo = metadata.get("SourceCode", None)
 
