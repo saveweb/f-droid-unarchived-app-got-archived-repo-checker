@@ -5,25 +5,27 @@ import httpx
 
 @dataclass
 class Result:
-    comfirmed: bool
+    confirmed: bool
     """ is the result reliable """
     repo_deleted: bool
     repo_archived: bool
+    moved_to: Optional[str]
     repo_real: str
     """ the real URL after redirects """
     error: Optional[Exception]
     def __init__(
         self,
         *,
-        comfirmed: bool = False,
-        repo_deleted: bool = False,
-        repo_archived: bool = False,
+        repo_deleted: Optional[bool] = None,
+        repo_archived: Optional[bool] = None,
+        moved_to: Optional[str] = None,
         real_src: str = "",
         error: Optional[Exception] = None,
     ):
-        self.comfirmed = comfirmed
-        self.repo_deleted = repo_deleted
-        self.repo_archived = repo_archived
+        self.confirmed = repo_deleted != None or repo_archived != None or moved_to != None
+        self.repo_deleted = repo_deleted or False
+        self.repo_archived = repo_archived or False
+        self.moved_to = moved_to
         self.repo_real = real_src
         self.error = error
 
