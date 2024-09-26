@@ -20,10 +20,11 @@ def moved_to_github_check(client: httpx.Client, url: str, response: httpx.Respon
     err = None
     for newurl in set(GITHUB_REPO_URL.findall(response.text)):
         if newurl != url and not GITHUB_URL_BLACKLIST.search(newurl):
-            response = client.head(f'{newurl}/commit/{sample_commit_hash}')
+            response = client.get(f'{newurl}/branch_commits/{sample_commit_hash}')
             if response.status_code == 200:
-                res.moved_to = newurl
-                return
+                if 'js-spoofed-commit-warning-trigger' not in response.text:
+                    res.moved_to = newurl
+                    return
             elif response.status_code != 404:
                 err = Exception(f"HTTP status code: {response.status_code}")
     if err:
