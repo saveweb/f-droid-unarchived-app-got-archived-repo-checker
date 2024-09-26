@@ -9,6 +9,7 @@ class Result:
     """ is the result reliable """
     repo_deleted: bool
     repo_archived: bool
+    moved_to: Optional[str]
     repo_real: str
     """ the real URL after redirects """
     error: Optional[Exception]
@@ -17,12 +18,14 @@ class Result:
         *,
         repo_deleted: Optional[bool] = None,
         repo_archived: Optional[bool] = None,
+        moved_to: Optional[str] = None,
         real_src: str = "",
         error: Optional[Exception] = None,
     ):
-        self.confirmed = repo_deleted != None or repo_archived != None
+        self.confirmed = repo_deleted != None or repo_archived != None or moved_to != None
         self.repo_deleted = repo_deleted or False
         self.repo_archived = repo_archived or False
+        self.moved_to = moved_to
         self.repo_real = real_src
         self.error = error
 

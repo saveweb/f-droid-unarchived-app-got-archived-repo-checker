@@ -83,7 +83,12 @@ def main():
                 continue
             lock.release()
             try:
-                res = is_archived_repo(repo, client=client)
+                builds = metadata.get('Builds', [])
+                cur_build = next((build for build in builds if build['versionCode'] == metadata['CurrentVersionCode']), {})
+                if not cur_build and len(builds) > 0:
+                    # just grab the last build
+                    cur_build = builds[-1]
+                res = is_archived_repo(repo, cur_build.get('commit', None), client=client)
                 lock.acquire()
                 checked[pkg] = {
                     "confirmed": res.confirmed,
@@ -91,6 +96,7 @@ def main():
                     "repo_real": res.repo_real,
                     "repo_deleted": res.repo_deleted,
                     "repo_archived": res.repo_archived,
+                    "moved_to": res.moved_to,
                     "error": str(res.error) if res.error else None,
                 }
                 lock.release()

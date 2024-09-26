@@ -15,20 +15,29 @@ def _is_cloudflare_captcha(response: httpx.Response) -> bool:
     return response.headers.get("cf-mitigated", "") == "challenge"
 
 
-def check_all(response: httpx.Response) -> Result:
+def check_all(client: httpx.Client, response: httpx.Response, sample_commit_hash: Optional[str] = None) -> Result:
     funcs = [
         methods.github_check,
         methods.gitlab_check,
         methods.gitea_check,
         methods.gitee_check,
     ]
+    moved_checks = [
+        methods.moved_to_github_check,
+        methods.moved_to_gitlab_check,
+    ]
     res = Result()
+    url = str(response.url)
     for func in funcs:
         logger.debug(f"exec {func.__name__}")
-        res = func(str(response.url), response)
+        res = func(url, response)
         if res.confirmed:
             logger.debug(f"exec {func.__name__} returned {res.repo_archived}")
             break
+
+    if res.repo_archived and sample_commit_hash:
+        for func in moved_checks:
+            func(client, url, response, sample_commit_hash, res)
 
     return res
 
@@ -37,7 +46,7 @@ class WAFDetected(Exception):
     pass
 
 
-def is_archived_repo(url: str, *, client: Optional[httpx.Client] = None) -> Result:
+def is_archived_repo(url: str, sample_commit_hash: Optional[str] = None, *, client: Optional[httpx.Client] = None) -> Result:
     if client is None:
         client = global_client
 
@@ -58,9 +67,9 @@ def is_archived_repo(url: str, *, client: Optional[httpx.Client] = None) -> Resu
                 real_src=str(response.url),
             )
 
-        result = check_all(response)
+        result = check_all(client, response, sample_commit_hash)
         result.real_src = str(response.url),
-        if not result.confirmed:
+        if not result.confirmed and not result.error:
             result.error = Exception("Unknown git/svn service or archive repository not supported")
         return result
     except Exception as e:
