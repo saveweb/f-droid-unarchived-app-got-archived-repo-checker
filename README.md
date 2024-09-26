@@ -3,12 +3,12 @@
 ## Usage
 
 ```bash
-rm index-v2.json checked.result.json -f # remove index and result files
-curl https://f-droid.org/repo/index-v2.json > index-v2.json # download index file
+rm checked.result.json -f # remove result files
+git clone --depth=1 https://gitlab.com/fdroid/fdroiddata.git # clone fdroid metadata repository
 ```
 
 ```bash
-python -m archived_repo_checker.fdroid # run checker, this action is resumable (Ctrl+C to stop, and run again to continue)
+python -m archived_repo_checker.fdroid ./fdroiddata/metadata # run checker, this action is resumable (Ctrl+C to stop, and run again to continue)
 ```
 
 `checked.result.json` is the result file.
