@@ -66,6 +66,10 @@ def gitea_check(url: str, response: httpx.Response) -> Result:
             "Powered by Gitea" in response.text
             and "https://about.gitea.com" in response.text
         )
+        or (
+            "Powered by Forgejo" in response.text
+            and "https://forgejo.org" in response.text
+        )
         or ("codeberg.org/" in url)
     ):
         return Result()
