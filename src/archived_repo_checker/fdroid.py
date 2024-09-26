@@ -22,10 +22,10 @@ def get_repo_ok_pkgs(metadata_dir) -> dict[str, dict]:
         print(f'\33[2K{idx+1}/{len(yamls)}', os.path.basename(yml_path), end="\r")
         with open(yml_path, "r") as f:
             yml = yaml.safe_load(f)
-            if not 'NoSourceSince' in yml and yml.get('ArchivePolicy', 3) != 0:
+            if 'NoSourceSince' not in yml and yml.get('ArchivePolicy', 3) != 0:
                 repo_ok_pkgs[yml_path] = yml
 
-    print("") # just get a newline
+    print() # just get a newline
 
     return repo_ok_pkgs
 

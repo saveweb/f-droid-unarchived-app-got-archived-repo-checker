@@ -55,7 +55,7 @@ def is_archived_repo(url: str, sample_commit_hash: Optional[str] = None, *, clie
         if _is_cloudflare_captcha(response):
             return Result(
                 error=WAFDetected("Cloudflare WAF detected"),
-                real_src=str(response.url),
+                repo_real=str(response.url),
             )
 
         if response.status_code == 404:
@@ -64,11 +64,11 @@ def is_archived_repo(url: str, sample_commit_hash: Optional[str] = None, *, clie
         if response.status_code != 200:
             return Result(
                 error=Exception(f"HTTP status code: {response.status_code}"),
-                real_src=str(response.url),
+                repo_real=str(response.url),
             )
 
         result = check_all(client, response, sample_commit_hash)
-        result.real_src = str(response.url),
+        result.repo_real = str(response.url)
         if not result.confirmed and not result.error:
             result.error = Exception("Unknown git/svn service or archive repository not supported")
         return result
