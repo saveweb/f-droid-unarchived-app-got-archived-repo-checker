@@ -77,7 +77,7 @@ def main():
             repo: Optional[str] = metadata.get('Repo', None)
             if repo is None\
                 or not repo.startswith("http") \
-                or "git.code.sf.net/p/" in repo:
+                or ".code.sf.net/p/" in repo:
                 # Fallback to SourceCode
                 repo = metadata.get("SourceCode", None)
 
