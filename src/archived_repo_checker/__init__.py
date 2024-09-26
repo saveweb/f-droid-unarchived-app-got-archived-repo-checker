@@ -15,21 +15,22 @@ def _is_cloudflare_captcha(response: httpx.Response) -> bool:
     return response.headers.get("cf-mitigated", "") == "challenge"
 
 
-def check_all(response: httpx.Response) -> tuple[bool, bool]:
+def check_all(response: httpx.Response) -> Result:
     funcs = [
         methods.github_check,
         methods.gitlab_check,
         methods.gitea_check,
         methods.gitee_check,
     ]
+    res = Result()
     for func in funcs:
         logger.debug(f"exec {func.__name__}")
         res = func(str(response.url), response)
-        if res[0]:
-            logger.debug(f"exec {func.__name__} returned {res[1]}")
-            return res
+        if res.confirmed:
+            logger.debug(f"exec {func.__name__} returned {res.repo_archived}")
+            break
 
-    return False, False
+    return res
 
 
 class WAFDetected(Exception):
@@ -44,7 +45,6 @@ def is_archived_repo(url: str, *, client: Optional[httpx.Client] = None) -> Resu
         response = client.get(url, follow_redirects=True)
         if _is_cloudflare_captcha(response):
             return Result(
-                confirmed=False,
                 error=WAFDetected("Cloudflare WAF detected"),
                 real_src=str(response.url),
             )
@@ -54,24 +54,17 @@ def is_archived_repo(url: str, *, client: Optional[httpx.Client] = None) -> Resu
 
         if response.status_code != 200:
             return Result(
-                confirmed=False,
                 error=Exception(f"HTTP status code: {response.status_code}"),
                 real_src=str(response.url),
             )
 
-        _result = check_all(response)
-        return Result(
-            confirmed=_result[0],
-            repo_archived=_result[1],
-            real_src=str(response.url),
-            error=Exception(
-                "Unknown git/svn service or archive repository not supported"
-            )
-            if _result == (False, False)
-            else None,
-        )
+        result = check_all(response)
+        result.real_src = str(response.url),
+        if not result.confirmed:
+            result.error = Exception("Unknown git/svn service or archive repository not supported")
+        return result
     except Exception as e:
-        return Result(confirmed=False, error=e)
+        return Result(error=e)
 
 
 def argparser():
