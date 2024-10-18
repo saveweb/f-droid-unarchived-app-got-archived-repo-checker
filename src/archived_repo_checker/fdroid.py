@@ -3,27 +3,35 @@ import glob
 import json
 import os
 from typing import Optional
-import yaml
 import threading
 from queue import Queue
+from concurrent.futures import ProcessPoolExecutor
 
 import httpx
+import yaml
 
 from archived_repo_checker import is_archived_repo
 
+def process_yaml(yml_path):
+    with open(yml_path, "r") as f:
+        yml = yaml.safe_load(f)
+        if 'NoSourceSince' not in yml and yml.get('ArchivePolicy', 3) != 0:
+            return yml_path, yml
+    return None
 
 def get_repo_ok_pkgs(metadata_dir) -> dict[str, dict]:
     yamls = glob.glob(glob.escape(metadata_dir) + "/*.yml")
-
     repo_ok_pkgs = {}
 
     print("Loading packages...")
-    for idx, yml_path in enumerate(yamls):
-        print(f'\33[2K{idx+1}/{len(yamls)}', os.path.basename(yml_path), end="\r")
-        with open(yml_path, "r") as f:
-            yml = yaml.safe_load(f)
-            if 'NoSourceSince' not in yml and yml.get('ArchivePolicy', 3) != 0:
-                repo_ok_pkgs[yml_path] = yml
+    with ProcessPoolExecutor() as executor:
+        futures = {executor.submit(process_yaml, yml_path): yml_path for yml_path in yamls}
+        for idx, future in enumerate(futures):
+            yml_path = futures[future]
+            print(f'\33[2K{idx+1}/{len(yamls)}', os.path.basename(yml_path), end="\r")
+            result = future.result()
+            if result:
+                repo_ok_pkgs[result[0]] = result[1]
 
     print() # just get a newline
 
@@ -108,6 +116,8 @@ def main():
                 lock.release()
                 if not res.confirmed:
                     print(f"not confirmed: {os.path.basename(pkg)} | {repo} <-> {res.error} |")
+            except Exception as e:
+                print(f"Error: {os.path.basename(pkg)} | {repo} <-> {e} |")
             finally:
                 item_queue.task_done()
 
